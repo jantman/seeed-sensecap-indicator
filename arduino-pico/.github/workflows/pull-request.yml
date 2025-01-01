@@ -1,0 +1,337 @@
+# Run whenever a PR is generated or updated.
+
+
+name: Arduino-Pico CI
+
+on:
+  pull_request:
+
+jobs:
+
+# Consistent style, spelling
+  astyle:
+    name: Spelling, Style, Boards, Package
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: false
+    - name: Run codespell
+      uses: codespell-project/actions-codespell@v2
+      with:
+        skip: ./ArduinoCore-API,./libraries/ESP8266SdFat,./libraries/Adafruit_TinyUSB_Arduino,./libraries/LittleFS/lib,./tools/pyserial,./pico-sdk,./.github,./docs/i2s.rst,./cores/rp2040/api,./libraries/FreeRTOS,./tools/libbearssl/bearssl,./include,./libraries/WiFi/examples/BearSSL_Server,./ota/uzlib,./libraries/http-parser/lib,./libraries/WebServer/examples/HelloServerBearSSL/HelloServerBearSSL.ino,./libraries/HTTPUpdateServer/examples/SecureBearSSLUpdater/SecureBearSSLUpdater.ino,./.git,./libraries/FatFS/lib/fatfs,./libraries/FatFS/src/diskio.h,./libraries/FatFS/src/ff.cpp,./libraries/FatFS/src/ffconf.h,./libraries/FatFS/src/ffsystem.cpp,./libraries/FatFS/src/ff.h,./libraries/lwIP_WINC1500/src/driver,./libraries/lwIP_WINC1500/src/common,./libraries/lwIP_WINC1500/src/bus_wrapper,./libraries/lwIP_WINC1500/src/spi_flash
+        ignore_words_list: ser,dout,shiftIn,acount,froms
+    - name: Get submodules for following tests
+      run: git submodule update --init
+    - name: Check package references
+      run: |
+        ./tests/ci/pkgrefs_test.sh
+    - name: Check boards.txt was not edited after makeboards.py
+      run: |
+        ./tools/makeboards.py
+        # If anything changed, GIT should return an error and fail the test
+        git diff --exit-code
+    - name: Run astyle on all code/examples
+      run: |
+        sudo apt update
+        sudo apt install astyle
+        ./tests/restyle.sh
+        # If anything changed, GIT should return an error and fail the test
+        git diff --exit-code
+
+# Build all examples on linux (core and Arduino IDE)
+  build-linux:
+    name: Build ${{ matrix.chunk }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Linux toolchain
+      id: cache-linux
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketches
+      env:
+        BUILD_PARITY: custom
+        mod: 6
+        rem: ${{ matrix.chunk }}
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        bash ./tests/build.sh
+
+# Build all rp2350 examples on linux (core and Arduino IDE)
+  build-rp2350-linux:
+    name: Build RP2350 ${{ matrix.chunk }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Linux toolchain
+      id: cache-linux
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketches
+      env:
+        BUILD_PARITY: custom
+        mod: 6
+        rem: ${{ matrix.chunk }}
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        bash ./tests/build-rp2350.sh
+
+# Build all rp2350-riscv examples on linux (core and Arduino IDE)
+  build-rp2350-riscv-linux:
+    name: Build RP2350-RISCV ${{ matrix.chunk }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Linux toolchain
+      id: cache-linux
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketches
+      env:
+        BUILD_PARITY: custom
+        mod: 6
+        rem: ${{ matrix.chunk }}
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        bash ./tests/build-rp2350-riscv.sh
+
+# Build TinyUSB examples, requires custom build command line
+  build-tinyusb:
+    name: Build TinyUSB Examples
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Linux toolchain
+      id: cache-linux
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketches
+      env:
+        BUILD_PARITY: custom
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        bash ./tests/build-tinyusb.sh
+
+# Single build under Windows to ensure the Win toolchain is good.
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Windows toolchain
+      id: cache-windows
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketch
+      env:
+        WINDOWS: 1
+        BUILD_PARITY: custom
+        mod: 500
+        rem: 1
+      run: |
+        # Windows has python3 already installed, but it's called "python".
+        # Copy python.exe to the proper name so scripts "just work".
+        try { Get-Command python3 } catch { copy (get-command python).source (get-command python).source.Replace("python.exe", "python3.exe") }
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        bash ./tests/build.sh
+
+
+# Single build under macOS to ensure the Mac toolchain is good.
+  build-mac:
+    name: Mac
+    strategy:
+      matrix:
+        os: [macOS-13, macOS-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Mac toolchain
+      id: cache-mac
+      uses: actions/cache@v4
+      with:
+        path: ./tools/dist
+        key: ${{ runner.os }}-${{ hashFiles('package/package_pico_index.template.json', 'tests/common.sh') }}
+    - name: Build Sketch
+      env:
+        MACOSX: 1
+        BUILD_PARITY: custom
+        mod: 500
+        rem: 1
+      run: |
+        brew update
+        brew install bash
+        /usr/bin/env bash --version
+        uname -a
+        cd pico-sdk
+        git submodule update --init
+        cd ..
+        /usr/bin/env bash ./tests/build.sh
+        ./system/picotool/picotool version
+        otool -L ./system/picotool/picotool
+
+# Build a few examples with PlatformIO to test if integration works
+  build-platformio:
+    name: Build PlatformIO Examples
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - name: Initialize needed submodules
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ../libraries/Adafruit_TinyUSB_Arduino
+        git submodule update --init
+        cd ../..
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade platformio
+        pio pkg install --global --platform https://github.com/maxgerhardt/platform-raspberrypi.git
+        pio pkg update --global --platform https://github.com/maxgerhardt/platform-raspberrypi.git
+        pio pkg install --global --tool symlink://.
+        cp -f /home/runner/work/arduino-pico/arduino-pico/tools/json/*.json /home/runner/.platformio/platforms/raspberrypi/boards/.
+    - name: Build Multicore Example
+      run: pio ci -v --board=rpipico --board=rpipico2 --board=adafruit_feather -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/rp2040/examples/Multicore/Multicore.ino
+    - name: Build Multicore Example (RISC-V)
+      run: pio ci -v --board=rpipico2 -O "board_build.mcu = rp2350-riscv" -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/rp2040/examples/Multicore/Multicore.ino
+    - name: Build Fade Example
+      run: pio ci --board=rpipico --board=adafruit_feather -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/rp2040/examples/Fade/Fade.ino
+    - name: Build TinyUSB Example
+      run: pio ci --board=rpipico --board=adafruit_feather -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" -O "build_flags=-DUSE_TINYUSB" libraries/Adafruit_TinyUSB_Arduino/examples/CDC/cdc_multi/cdc_multi.ino
+    - name: Build WiFi Example
+      run: pio ci --board=rpipicow -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/WiFi/examples/ScanNetworks/ScanNetworks.ino
+    - name: Build Signed OTA Example
+      run: pio ci --board=rpipicow -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/ArduinoOTA/examples/SignedOTA/SignedOTA.ino
+    - name: Build Bluetooth Example
+      run: pio ci --board=rpipicow -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" -O "build_flags=-DPIO_FRAMEWORK_ARDUINO_ENABLE_BLUETOOTH" libraries/MouseBLE/examples/BLECircle/BLECircle.ino
+
+# Build every variant using PIO for simplicity
+  build-variants:
+    name: Build Every Variant ${{ matrix.chunk }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk: [0, 1]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - name: Initialize needed submodules
+      run: |
+        cd pico-sdk
+        git submodule update --init
+        cd ../libraries/Adafruit_TinyUSB_Arduino
+        git submodule update --init
+        cd ../..
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade platformio
+        pio pkg install --global --platform https://github.com/maxgerhardt/platform-raspberrypi.git
+        pio pkg update --global --platform https://github.com/maxgerhardt/platform-raspberrypi.git
+        pio pkg install --global --tool symlink://.
+        cp -f /home/runner/work/arduino-pico/arduino-pico/tools/json/*.json /home/runner/.platformio/platforms/raspberrypi/boards/.
+    - name: Build Every Variant
+      run: |
+        cnt=0
+        for b in $(cut -f1 -d. /home/runner/work/arduino-pico/arduino-pico/boards.txt | sed 's/#.*//' | sed 's/^menu$//' | sort -u); do
+          cnt=$((cnt + 1))
+          rem=$((cnt % 2))
+          if [ $rem == ${{ matrix.chunk }} ]; then
+            pio ci --board=$b -O "platform_packages=framework-arduinopico@symlink:///home/runner/work/arduino-pico/arduino-pico" libraries/rp2040/examples/Bootsel/Bootsel.ino
+          fi
+        done
