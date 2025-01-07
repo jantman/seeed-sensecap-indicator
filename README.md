@@ -23,8 +23,8 @@ See also: https://github.com/Seeed-Solution/SenseCAP_Indicator_ESP32/discussions
     * [Sensirion I2C SGP40](https://github.com/Sensirion/arduino-i2c-sgp40) version 0.1.0
     * [PacketSerial](https://github.com/bakercp/PacketSerial) version 1.4.0
     * [Sensirion Core](https://github.com/Sensirion/arduino-core) version 0.7.1
-4. Compile: `cd sensecap-indicator-rp2040-extended/indicator_rp2040 && rduino-cli compile -b rp2040:rp2040:seeed_indicator_rp2040 --output-dir build .`
-    ```
+4. Compile: `cd sensecap-indicator-rp2040-extended/indicator_rp2040 && arduino-cli compile -b rp2040:rp2040:seeed_indicator_rp2040 --output-dir build .`
+    ```console
     $ arduino-cli compile -b rp2040:rp2040:seeed_indicator_rp2040 --output-dir build .
     Sketch uses 110380 bytes (5%) of program storage space. Maximum is 2093056 bytes.
     Global variables use 11568 bytes (4%) of dynamic memory, leaving 250576 bytes for local variables. Maximum is 262144 bytes.
@@ -51,20 +51,24 @@ See also: https://github.com/Seeed-Solution/SenseCAP_Indicator_ESP32/discussions
     -rw-r--r-- 1 jantman jantman 1.9M Jan  1 10:26 indicator_rp2040.ino.map
     -rw-r--r-- 1 jantman jantman 250K Jan  1 10:26 indicator_rp2040.ino.uf2
     ```
-5. **TBD** Upload/flash - see https://wiki.seeedstudio.com/SenseCAP_Indicator_How_To_Flash_The_Default_Firmware/#for-rp2040
+5. Flash per https://wiki.seeedstudio.com/SenseCAP_Indicator_How_To_Flash_The_Default_Firmware/#for-rp2040
+    1. With a paper clip or reset button tool, long press the recessed button on the bottom of the unit and hold it in.
+    2. Plug in to computer via USB and wait for it to be recognized as a USB mass storage device, then release the button.
+    3. Copy the resulting ``indicator_rp2040.ino.uf2`` to the USB mass storage device.
+    4. The disk will unmount itself and then the unit will beep; that should be it.
 
 ## ESP32 / ESPHome
 
-Configure your device something like:
+A minimal ESPHome configuration to use the built-in sensors should include:
 
-```
+```yaml
 external_components:
   - source:
       type: git
       url: https://github.com/jantman/seeed-sensecap-indicator
       ref: main
       path: esphome-sensecap-indicator-sensors/components/
-    components: [ rtttl, dfplayer ]
+    components: [ sensecap_indicator_sensors ]
 
 sensor:
   - platform: sensecap_indicator_sensors
@@ -77,6 +81,12 @@ sensor:
       name: "Temperature Internal (SCD41)"
     humidity_internal:
       name: "Humidity Internal (SCD41)"
+```
+
+An example of a more complete configuration is:
+
+```yaml
+TBD.
 ```
 
 ## Other References
