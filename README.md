@@ -12,7 +12,15 @@ See also: https://github.com/Seeed-Solution/SenseCAP_Indicator_ESP32/discussions
 * [arduino-pico/](arduino-pico/) - Archive of https://github.com/earlephilhower/arduino-pico/tree/5296241949f66d138af95cd780050a3e3ffbabcb for RP2040 support in Arduino IDE.
 * [esphome-sensecap-indicator-sensors/](esphome-sensecap-indicator-sensors/) - Archive of https://github.com/tobi1449/esphome-sensecap-indicator-sensors as of [08e62eecdd8a72e51628c57a1709bbe519757d95](https://github.com/tobi1449/esphome-sensecap-indicator-sensors/tree/08e62eecdd8a72e51628c57a1709bbe519757d95)
 
-## RP2040 Build and Flash
+## Current Setup
+
+1. For D1S models that have the onboard sensors, flash with custom RP2040 firmware per https://github.com/jantman/RP2040-Firmware/tree/jantman
+2. Use the HomeDicator ESPHome package from https://github.com/jantman/ESPHome-Package/tree/jantman-spinbox-rp2040
+3. See [my-esphome-configs/](my-esphome-configs/) for example configs.
+
+## Previous Experiments
+
+### RP2040 Build and Flash
 
 1. Open Ardunio IDE. Go to `File` -> `Preferences`, in the `Additional boards manager URLs` enter https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json (this is also backed up in this repo). Click OK.
 2. Click into `Tools` -> `Boards` -> `Boards Manager` to bring up the Boards Manager sidebar. Type `indicator` in the search box to bring up `Raspberry Pi Pico/RP2040/RP2350 by Earle F. Philhower, III` and install version 4.4.1; wait for the installation to finish.
@@ -57,7 +65,7 @@ See also: https://github.com/Seeed-Solution/SenseCAP_Indicator_ESP32/discussions
     3. Copy the resulting ``indicator_rp2040.ino.uf2`` to the USB mass storage device.
     4. The disk will unmount itself and then the unit will beep; that should be it.
 
-## ESP32 / ESPHome
+### ESP32 / ESPHome
 
 A minimal ESPHome configuration to use the built-in sensors should include:
 
