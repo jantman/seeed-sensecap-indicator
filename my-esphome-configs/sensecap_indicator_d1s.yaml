@@ -74,19 +74,24 @@ sensor:
     name: "CO2 Level"
     key: "scd4x.co2"
     unit_of_measurement: "ppm"
+    state_class: "measurement"
     icon: "mdi:molecule-co2"
     accuracy_decimals: 0
     uart_id: uart_rp2040
   - platform: json_uart
     name: "Temperature"
     key: "scd4x.temp"
-    unit_of_measurement: "°C"
+    filters:
+      - lambda: return x * (9.0/5.0) + 32.0;
+    unit_of_measurement: "°F"
+    state_class: "measurement"
     icon: "mdi:thermometer"
     uart_id: uart_rp2040
   - platform: json_uart
     name: "Humidity"
     key: "scd4x.humidity"
     unit_of_measurement: "%"
+    state_class: "measurement"
     icon: "mdi:water-percent"
     uart_id: uart_rp2040
 
