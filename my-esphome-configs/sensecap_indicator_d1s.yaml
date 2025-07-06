@@ -62,10 +62,78 @@ sensor:
       file: HomeDicator/core/templates/sensor.yaml
       vars:
         hass_sensor_id: "avgtempbasement" # You can ommit the "sensor."
+  # Smart thermostat sensors with 10°F offset logic
   - !include 
-      file: HomeDicator/core/templates/spinbox_climate_sensor.yaml
+      file: HomeDicator/core/templates/smart_spinbox_climate_sensor.yaml
       vars:
-         hass_climate_id: "testthermostat" # You can ommit the "climate."
+         hass_climate_id: "esp32_basement_hvac_basementzone" # You can ommit the "climate."
+  # Additional sensors for heat and cool setpoints to trigger updates
+  - platform: homeassistant
+    id: esp32_basement_hvac_basementzone_heat_setpoint
+    entity_id: climate.esp32_basement_hvac_basementzone
+    attribute: target_temp_low
+    on_value:
+      - if:
+         condition:
+           lambda: |-
+             return !id(user_is_interacting);
+         then:
+          - lvgl.spinbox.update:
+              id: lvgl_smart_spinbox_esp32_basement_hvac_basementzone
+              value: !lambda |-
+                // Get current mode and both setpoints
+                std::string mode = id(mode_esp32_basement_hvac_basementzone).state;
+                float heat_temp = id(esp32_basement_hvac_basementzone_heat_setpoint).state;
+                float cool_temp = id(esp32_basement_hvac_basementzone_cool_setpoint).state;
+                
+                // Return appropriate value based on mode
+                if (mode == "heat") {
+                  return heat_temp;
+                } else if (mode == "cool") {
+                  if (!isnan(cool_temp)) {
+                    return cool_temp;
+                  }
+                } else if (mode == "heat_cool" || mode == "auto") {
+                  // Show average of both setpoints
+                  if (!isnan(cool_temp) && !isnan(heat_temp)) {
+                    return (heat_temp + cool_temp) / 2.0;
+                  }
+                }
+                // Default fallback
+                return heat_temp;
+  - platform: homeassistant
+    id: esp32_basement_hvac_basementzone_cool_setpoint
+    entity_id: climate.esp32_basement_hvac_basementzone
+    attribute: target_temp_high
+    on_value:
+      - if:
+         condition:
+           lambda: |-
+             return !id(user_is_interacting);
+         then:
+          - lvgl.spinbox.update:
+              id: lvgl_smart_spinbox_esp32_basement_hvac_basementzone
+              value: !lambda |-
+                // Get current mode and both setpoints
+                std::string mode = id(mode_esp32_basement_hvac_basementzone).state;
+                float heat_temp = id(esp32_basement_hvac_basementzone_heat_setpoint).state;
+                float cool_temp = id(esp32_basement_hvac_basementzone_cool_setpoint).state;
+                
+                // Return appropriate value based on mode
+                if (mode == "heat") {
+                  return heat_temp;
+                } else if (mode == "cool") {
+                  if (!isnan(cool_temp)) {
+                    return cool_temp;
+                  }
+                } else if (mode == "heat_cool" || mode == "auto") {
+                  // Show average of both setpoints
+                  if (!isnan(cool_temp) && !isnan(heat_temp)) {
+                    return (heat_temp + cool_temp) / 2.0;
+                  }
+                }
+                // Default fallback
+                return heat_temp;
   - platform: uptime
     name: Uptime
   - platform: internal_temperature
@@ -99,7 +167,44 @@ text_sensor:
   - !include
       file: HomeDicator/core/templates/mode_climate_sensor.yaml
       vars:
-         hass_climate_id: "testthermostat" # You can ommit the "climate."
+         hass_climate_id: "esp32_basement_hvac_basementzone" # You can ommit the "climate."
+  # Additional mode sensor to trigger spinbox updates when mode changes
+  - platform: homeassistant
+    id: esp32_basement_hvac_basementzone_mode_trigger
+    entity_id: climate.esp32_basement_hvac_basementzone
+    on_value:
+      - if:
+         condition:
+           lambda: |-
+             return !id(user_is_interacting);
+         then:
+          - lvgl.spinbox.update:
+              id: lvgl_smart_spinbox_esp32_basement_hvac_basementzone
+              value: !lambda |-
+                // Get current mode and both setpoints
+                std::string mode = id(mode_esp32_basement_hvac_basementzone).state;
+                float heat_temp = 70.0;  // Default fallback
+                float cool_temp = 75.0;  // Default fallback
+                
+                if (id(esp32_basement_hvac_basementzone_heat_setpoint).has_state()) {
+                  heat_temp = id(esp32_basement_hvac_basementzone_heat_setpoint).state;
+                }
+                
+                if (id(esp32_basement_hvac_basementzone_cool_setpoint).has_state()) {
+                  cool_temp = id(esp32_basement_hvac_basementzone_cool_setpoint).state;
+                }
+                
+                // Return appropriate value based on mode
+                if (mode == "heat") {
+                  return heat_temp;
+                } else if (mode == "cool") {
+                  return cool_temp;
+                } else if (mode == "heat_cool" || mode == "auto") {
+                  // Show average of both setpoints
+                  return (heat_temp + cool_temp) / 2.0;
+                }
+                // Default fallback
+                return heat_temp;
   - !include
       file: HomeDicator/core/templates/switch_sensor.yaml
       vars:
@@ -161,10 +266,10 @@ lvgl:
                     icon_off: "\U000F0336" # mdi:lightbulb-outline
                     title: "Basement Lights"
               - !include
-                  file: HomeDicator/user_interface/templates/tiles/thermostat/spinbox_square.yaml
+                  file: HomeDicator/user_interface/templates/tiles/thermostat/smart_spinbox_square.yaml
                   vars:
                     color: 0xeebf41
-                    hass_climate_id: "testthermostat"
+                    hass_climate_id: "esp32_basement_hvac_basementzone"
                     min_value: 40
                     max_value: 90
                     unit: "°F"
@@ -174,6 +279,6 @@ lvgl:
                   file: HomeDicator/user_interface/templates/tiles/thermostat/mode_square.yaml
                   vars:
                     color: 0xeebf41
-                    hass_climate_id: "testthermostat"
+                    hass_climate_id: "esp32_basement_hvac_basementzone"
                     title: "Basement Mode"
                     icon: "\U000F1C21"
